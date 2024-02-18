@@ -30,28 +30,37 @@ obstacles = []
 # Set up lives
 lives = 3
 
+# Set up score
+score = 0
+font_score = pygame.font.Font(None, 36)
+
 # Set up font
 font = pygame.font.Font(None, 36)
 
 # Initialize Pygame mixer
 pygame.mixer.init()
 
+# Set initial volume for menu
+volume = 0.25
+
 # Load the jumping sound effect
 jump_sound = pygame.mixer.Sound(os.path.join("sounds", "jump_sound.mp3"))
+jump_sound.set_volume(volume)
 
 # Load the collision sound effect (you can replace this with your specific collision sound)
 collision_sound = pygame.mixer.Sound(os.path.join("sounds", "collision_sound.mp3"))
+collision_sound.set_volume(volume)
 
 # Load the game start sound
 game_start_sound = pygame.mixer.Sound(os.path.join("sounds", "game_start.mp3"))
+game_start_sound.set_volume(volume)
 
 # Load the background music
 pygame.mixer.music.load(os.path.join("sounds", "background_music.mp3"))
-pygame.mixer.music.set_volume(0.5)  # Set initial volume (adjust as needed)
+pygame.mixer.music.set_volume(volume)  # Set initial volume (adjust as needed)
 pygame.mixer.music.play(-1)  # Loop the background music
 
-# Set initial volume for menu
-volume = 0.5
+
 
 # Load the heart image
 heart_image = pygame.image.load(os.path.join("models", "heart.jpg"))
@@ -65,12 +74,26 @@ start_screen_rect = start_screen_text.get_rect(center=(width // 2, height // 2))
 game_over_text = font.render("Game Over - Press SPACE to try again", True, (0, 0, 0))
 game_over_rect = game_over_text.get_rect(center=(width // 2, height // 2))
 
+# Set up pause menu options
+resume_text = font.render("Resume", True, (0, 0, 0))
+resume_rect = resume_text.get_rect(center=(width // 2, height // 2 + 50))
+
+volume_text = font.render(f"Volume: {int(volume * 100)}%", True, (0, 0, 0))
+volume_rect = volume_text.get_rect(center=(width // 2, height // 2 + 100))
+
+quit_text = font.render("Quit Game", True, (0, 0, 0))
+quit_rect = quit_text.get_rect(center=(width // 2, height // 2 + 150))
+
 # Start screen loop
-while True:
+waiting_for_space = True
+while waiting_for_space:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            game_start_sound.play()  # Play the game start sound
+            waiting_for_space = False
 
     keys = pygame.key.get_pressed()
 
@@ -81,23 +104,22 @@ while True:
     # Update the display
     pygame.display.flip()
 
-    if keys[pygame.K_SPACE]:
-        game_start_sound.play()  # Play the game start sound
-        break  # Exit the start screen loop when the spacebar is pressed
-
 # Main game loop
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-
     keys = pygame.key.get_pressed()
 
     # Pause menu handling
     if keys[pygame.K_ESCAPE]:
         paused = True
         selected_option = 0
+        key_repeat_delay = 200  # Set the initial delay for key repeats
+        key_repeat_interval = 50  # Set the interval for key repeats
+        clock = pygame.time.Clock()  # Create a clock object for controlling the frame rate
+        clock.tick(30)  # Set an initial tick to control the initial key repeat rate
 
         while paused:
             for event in pygame.event.get():
@@ -105,61 +127,86 @@ while True:
                     pygame.quit()
                     sys.exit()
 
-            keys = pygame.key.get_pressed()
+                keys = pygame.key.get_pressed()
 
-            # Handle menu navigation
-            if keys[pygame.K_w]:
-                selected_option = (selected_option - 1) % 3
-            elif keys[pygame.K_s]:
-                selected_option = (selected_option + 1) % 3
+                # Handle menu navigation with keys
+                if keys[pygame.K_s]:
+                    key_repeat_delay -= clock.get_rawtime()
+                    if key_repeat_delay <= 0:
+                        key_repeat_delay = key_repeat_interval
+                        selected_option = (selected_option - 1) % 3
+                elif keys[pygame.K_w]:
+                    key_repeat_delay -= clock.get_rawtime()
+                    if key_repeat_delay <= 0:
+                        key_repeat_delay = key_repeat_interval
+                        selected_option = (selected_option + 1) % 3
 
-            # Adjust volume with A and D keys
-            if selected_option == 1:
-                if keys[pygame.K_a] and volume > 0:
-                    volume -= 0.01
-                elif keys[pygame.K_d] and volume < 1:
-                    volume += 0.01
-                pygame.mixer.music.set_volume(volume)
+                # Handle menu navigation with mouse
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                mouse_clicked = pygame.mouse.get_pressed()[0]
 
-            # Display pause menu
-            screen.fill((255, 255, 255))
-            pause_text = font.render("Paused", True, (0, 0, 0))
-            pause_rect = pause_text.get_rect(center=(width // 2, height // 2 - 50))
-            screen.blit(pause_text, pause_rect)
+                if resume_rect.collidepoint(mouse_x, mouse_y):
+                    selected_option = 0
+                elif volume_rect.collidepoint(mouse_x, mouse_y):
+                    selected_option = 1
+                elif quit_rect.collidepoint(mouse_x, mouse_y):
+                    selected_option = 2
 
-            # Display menu options
-            resume_text = font.render("Resume", True, (0, 0, 0))
-            resume_rect = resume_text.get_rect(center=(width // 2, height // 2 + 50))
-            screen.blit(resume_text, resume_rect)
+                # Adjust volume with A and D keys
+                if selected_option == 1:
+                    if keys[pygame.K_a] and volume > 0:
+                        volume -= 0.01
+                    elif keys[pygame.K_d] and volume < 1:
+                        volume += 0.01
+                    pygame.mixer.music.set_volume(volume)
 
-            volume_text = font.render(f"Volume: {int(volume * 100)}%", True, (0, 0, 0))
-            volume_rect = volume_text.get_rect(center=(width // 2, height // 2 + 100))
-            screen.blit(volume_text, volume_rect)
+                # Display pause menu
+                screen.fill((255, 255, 255))
+                pause_text = font.render("Paused", True, (0, 0, 0))
+                pause_rect = pause_text.get_rect(center=(width // 2, height // 2 - 50))
+                screen.blit(pause_text, pause_rect)
 
-            quit_text = font.render("Quit Game", True, (0, 0, 0))
-            quit_rect = quit_text.get_rect(center=(width // 2, height // 2 + 150))
-            screen.blit(quit_text, quit_rect)
+                # Display menu options
+                resume_text = font.render("Resume", True, (0, 0, 0))
+                resume_rect = resume_text.get_rect(center=(width // 2, height // 2 + 50))
+                screen.blit(resume_text, resume_rect)
 
-            # Highlight the selected option
-            if selected_option == 0:
-                pygame.draw.rect(screen, (0, 0, 0), resume_rect, 2)
-            elif selected_option == 1:
-                pygame.draw.rect(screen, (0, 0, 0), volume_rect, 2)
-            elif selected_option == 2:
-                pygame.draw.rect(screen, (0, 0, 0), quit_rect, 2)
+                # Display volume text and update it
+                volume_text = font.render(f"Volume: {int(volume * 100)}%", True, (0, 0, 0))
+                volume_rect = volume_text.get_rect(center=(width // 2, height // 2 + 100))
+                screen.blit(volume_text, volume_rect)
 
-            # Update the display
-            pygame.display.flip()
+                quit_text = font.render("Quit Game", True, (0, 0, 0))
+                quit_rect = quit_text.get_rect(center=(width // 2, height // 2 + 150))
+                screen.blit(quit_text, quit_rect)
 
-            # Limit frames per second
-            pygame.time.Clock().tick(60)
-
-            if keys[pygame.K_SPACE]:
-                # Execute the selected option
+                # Highlight the selected option
                 if selected_option == 0:
-                    paused = False  # Resume the game
+                    pygame.draw.rect(screen, (0, 0, 0), resume_rect, 2)
+                elif selected_option == 1:
+                    pygame.draw.rect(screen, (0, 0, 0), volume_rect, 2)
                 elif selected_option == 2:
-                    pygame.quit()  # Quit the game
+                    pygame.draw.rect(screen, (0, 0, 0), quit_rect, 2)
+
+                # Update the display
+                pygame.display.flip()
+
+                # Limit frames per second
+                clock.tick(60)
+
+                # Adjust key repeat delay for smoother navigation
+                key_repeat_delay -= clock.get_rawtime()
+                if key_repeat_delay <= 0:
+                    key_repeat_delay = key_repeat_interval
+                else:
+                    continue
+
+                if keys[pygame.K_SPACE] or mouse_clicked:
+                    # Execute the selected option
+                    if selected_option == 0:
+                        paused = False  # Resume the game
+                    elif selected_option == 2:
+                        pygame.quit()  # Quit the game
 
     # Move player
     if keys[pygame.K_a] and player_x > 0:
@@ -197,14 +244,22 @@ while True:
     # Check for collisions with obstacles
     for obstacle in obstacles:
         if (
-            player_x < obstacle[0] + obstacle_width
-            and player_x + player_size > obstacle[0]
-            and player_y + player_size > obstacle[1]
+                player_x < obstacle[0] + obstacle_width
+                and player_x + player_size > obstacle[0]
+                and player_y + player_size > obstacle[1]
         ):
             # Decrease lives but do not reset player position on collision
             lives -= 1
             obstacles.remove(obstacle)  # Remove the collided obstacle
             collision_sound.play()  # Play the collision sound effect
+
+    # Check for successful jumps and increment the score
+    for obstacle in obstacles:
+        if (
+                obstacle[0] < player_x < obstacle[0] + obstacle_width
+                and player_y < obstacle[1]
+        ):
+            score += 1
 
     # Fill the screen with a white color
     screen.fill((255, 255, 255))
@@ -222,6 +277,10 @@ while True:
     # Draw lives in the top right corner
     for i in range(lives):
         screen.blit(heart_image, (width - (i + 1) * 40, 10))
+
+    # Display the score in the top left corner
+    score_text = font_score.render(f"Score: {score:03d}", True, (0, 0, 0))
+    screen.blit(score_text, (10, 10))
 
     # Check for game over
     if lives == 0:
@@ -244,6 +303,7 @@ while True:
         obstacles = []
         player_x = width // 2 - player_size // 2
         player_y = height - 2 * player_size
+        score = 0
 
     # Update the display
     pygame.display.flip()
