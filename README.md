@@ -29,3 +29,15 @@ This is a simple scrolling game created using Pygame. The player controls a char
    ```bash
    git clone https://github.com/brandon-xd/simple_game.git
    cd simple_game
+
+2. Install the required dependencies
+
+   ```bash
+   pip install pygame
+
+### Running the Game
+
+Run the game by executing the following command:
+
+   ```bash
+   python simple_game.py
