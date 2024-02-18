@@ -1,4 +1,4 @@
-# Scrolling Game
+# Simple Game
 This is a work in progress and will receive updates.
 
 ## Introduction
