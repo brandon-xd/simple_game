@@ -35,7 +35,7 @@ This is a simple scrolling game created using Pygame. The player controls a char
    ```bash
    pip install pygame
 
-### Running the Game
+## Running the Game
 
 Run the game by executing the following command:
 
